@@ -1,9 +1,32 @@
+#  version: "3.3"
+#  services:
+#    cryptostore2tty:
+#      image: ghcr.io/bmoscon/cryptostore:latest
+#      environment:
+#        - EXCHANGE=BINANCE
+#        - CHANNELS=trades,ticker,candles
+#        - SYMBOLS=BTC-USDT
+#        - BACKEND=TTY
 version: "3.3"
 services:
-  cryptostore2tty:
-    image: ghcr.io/bmoscon/cryptostore:latest
-    environment:
-      - EXCHANGE=BINANCE
-      - CHANNELS=trades
-      - SYMBOLS=BTC-USDT
-      - BACKEND=TTY
+ cryptostore-binance:
+   image: cryptostore:latest
+   environment:
+     - EXCHANGE=BINANCE
+     - CHANNELS=ticker,l2_book,trades,candles
+     - SYMBOLS=BTC-USDT,ETH-USDT
+     - BACKEND=DELTALAKE
+     - DELTALAKE_BASE_PATH=/app/data/deltalake
+   volumes:
+     - ./data:/app/data
+
+ cryptostore-binance-futures:
+   image: cryptostore:latest
+   environment:
+     - EXCHANGE=BINANCE_FUTURES
+     - CHANNELS=ticker,l2_book,trades,candles,funding,open_interest
+     - SYMBOLS=ETH-USDT-PERP,BTC-USDT-PERP
+     - BACKEND=DELTALAKE
+     - DELTALAKE_BASE_PATH=/app/data/deltalake
+   volumes:
+     - ./data:/app/data

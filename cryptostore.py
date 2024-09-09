@@ -18,6 +18,7 @@ from cryptofeed.backends.postgres import BookPostgres, TradePostgres, TickerPost
 from cryptofeed.backends.socket import BookSocket, TradeSocket, TickerSocket, FundingSocket, CandlesSocket, OpenInterestSocket, LiquidationsSocket
 from cryptofeed.backends.influxdb import BookInflux, TradeInflux, TickerInflux, FundingInflux, CandlesInflux, OpenInterestInflux, LiquidationsInflux
 from cryptofeed.backends.quest import BookQuest, TradeQuest, TickerQuest, FundingQuest, CandlesQuest, OpenInterestQuest, LiquidationsQuest
+from cryptofeed.backends.deltalake import BookDeltaLake, TradeDeltaLake, TickerDeltaLake, FundingDeltaLake, CandlesDeltaLake, OpenInterestDeltaLake, LiquidationsDeltaLake
 
 
 async def tty(obj, receipt_ts):
@@ -63,8 +64,11 @@ def load_config() -> Feed:
     bucket = os.environ.get('BUCKET')
     token = os.environ.get('TOKEN')
 
+    # Add Delta Lake configuration
+    delta_base_path = os.environ.get('DELTALAKE_BASE_PATH', '/app/data/deltalake')
+
     cbs = None
-    allowed_backends = ['REDIS', 'REDISSTREAM', 'MONGO', 'POSTGRES', 'TCP', 'UDP', 'UDS', 'INFLUX', 'QUEST', 'TTY']
+    allowed_backends = ['REDIS', 'REDISSTREAM', 'MONGO', 'POSTGRES', 'TCP', 'UDP', 'UDS', 'INFLUX', 'QUEST', 'TTY', 'DELTALAKE']
     if backend in allowed_backends:
         if backend == 'REDIS' or backend == 'REDISSTREAM':
             kwargs = {'host': host, 'port': port if port else 6379}
@@ -142,6 +146,24 @@ def load_config() -> Feed:
                 OPEN_INTEREST: tty,
                 LIQUIDATIONS: tty
             }
+        elif backend == 'DELTALAKE':
+            if not delta_base_path:
+                raise ValueError("DELTALAKE_BASE_PATH must be specified for Delta Lake backend")
+            kwargs = {
+                'base_path': delta_base_path,
+                'optimize_interval': int(os.environ.get('DELTA_OPTIMIZE_INTERVAL', 100)),
+                'time_travel': os.environ.get('DELTA_TIME_TRAVEL', 'false').lower() == 'true'
+            }
+            cbs = {
+                L2_BOOK: BookDeltaLake(snapshot_interval=snap_interval, snapshots_only=snap_only, **kwargs),
+                TRADES: TradeDeltaLake(**kwargs),
+                TICKER: TickerDeltaLake(**kwargs),
+                FUNDING: FundingDeltaLake(**kwargs),
+                CANDLES: CandlesDeltaLake(**kwargs),
+                OPEN_INTEREST: OpenInterestDeltaLake(**kwargs),
+                LIQUIDATIONS: LiquidationsDeltaLake(**kwargs)
+            }
+
     else:
         raise ValueError(f"Invalid backend '{backend}' specified - must be in {allowed_backends}")
 

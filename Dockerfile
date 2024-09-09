@@ -4,7 +4,7 @@ RUN apt update
 RUN apt install gcc git -y
 
 RUN pip install --no-cache-dir cython
-RUN pip install --no-cache-dir cryptofeed
+RUN pip install --no-cache-dir 'cryptofeed[deltalake] @ git+https://github.com/tommy-ca/cryptofeed'
 RUN pip install --no-cache-dir redis
 RUN pip install --no-cache-dir pymongo[srv]
 RUN pip install --no-cache-dir motor
